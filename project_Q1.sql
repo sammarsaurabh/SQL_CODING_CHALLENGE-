@@ -4,8 +4,8 @@ CREATE TABLE countries (
 	country_name varchar(50)
 );
 
-alter table countries
-rename  to continents;
+ALTER TABLE countries
+rename  TO continents;
 
 CREATE TABLE per_capita (
    	country_code varchar(3),
@@ -20,8 +20,8 @@ select* from continents;
 select* from continent_map;
 truncate table  continent_map;
 
-ALTER TABLE employees
-RENAME COLUMN first_name TO given_name;
+-- ALTER TABLE employees
+-- RENAME COLUMN first_name TO given_name;
 
 -- ALTER TABLE table_name
 -- ALTER COLUMN column_name
@@ -81,18 +81,6 @@ UPDATE continent_map
     continent_code = CASE continent_code WHEN '' THEN NULL ELSE continent_code END;
 
 /* Select Statement To Pull Up Duplicate Country Codes, FOO on top*/
-SELECT 
-    COALESCE(country_code, 'FOO') AS country_code
-FROM
-    continent_map
-GROUP BY 
-    country_code
-HAVING 
-    COUNT(*) > 1
-ORDER BY 
-    COALESCE(country_code, 'FOO') = 'FOO' DESC, -- Puts 'FOO' first
-    country_code;  -- Alphabetically sorts the rest
-
 with cte as(
 SELECT 
     COALESCE(country_code, 'FOO') AS country_code,
@@ -128,42 +116,15 @@ ORDER BY
 -- -------------------------------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------------
--- VVI
-CREATE DATABASE BrainTree;
--- USE database Braintree  used in mysql 
--- VVI
-CREATE SCHEMA braintree; BY DEFAULT SCHEMA IS PUBLIC
+ -- BY DEFAULT SCHEMA IS PUBLIC
 ------------------------------------------------------------------------------------------
-CREATE TABLE "braintree"."continent_map" ("country_code" text, "continent_code" text);
--- Prepare the statement
-PREPARE stmt AS
-INSERT INTO braintree.continent_map (continent_code, country_code) VALUES ($1, $2);
 
--- Execute the prepared statement with parameters
-EXECUTE stmt ('Asia', 'IN');
-EXECUTE stmt ('Europe', 'FR');
-
--- Deallocate the prepared statement
-DEALLOCATE stmt;
-
-CREATE TABLE "braintree"."continents" ("continent_code" text, "continent_name" text)
 -------------------------------------------------------------------------------------------
 -------------------------------------------------------------------------------------------
--- VVI in below this way of writing is happen in mysql. for postgre sql refer above;
--- in postgre sql ,in place of ` ,"" is used;
-PREPARE stmt FROM 'INSERT INTO `braintree`.`continents` (`continent_name`,`continent_code`) VALUES(?,?)'
-DEALLOCATE PREPARE stmt
-
-CREATE TABLE `braintree`.`countries` (`country_code` text, `country_name` text)
-PREPARE stmt FROM 'INSERT INTO `braintree`.`countries` (`country_name`,`country_code`) VALUES(?,?)'
-DEALLOCATE PREPARE stmt
-
-CREATE TABLE `braintree`.`per_capita` (`country_code` text, `year` int, `gdp_per_capita` double)
-PREPARE stmt FROM 'INSERT INTO `braintree`.`per_capita` (`gdp_per_capita`,`country_code`,`year`) VALUES(?,?,?)'
-DEALLOCATE PREPARE stmt
 -----------------------------------------------------------------------------------------------------
 /* Replace '' empty strings with NULL*/
--- USE braintree; not used in postgre sql
+ -- not used in postgre sql
+-- VERIFY
 UPDATE continent_map
     
 SET
@@ -179,7 +140,7 @@ SET
 /*                                     PART2 - Q1                 */
 
 
-/*a temporary table with a new column ID as a row_number on the table after order by contry_code, continent_code*/
+/*A temporary table with a new column ID as a row_number on the table after order by contry_code, continent_code*/
     CREATE TABLE t1 AS
     SELECT row_number() over (order by country_code, continent_code asc) as ID,country_code
       ,continent_code
@@ -200,7 +161,24 @@ SET
 /*drop temporary tables*/
  	DROP TABLE t1;
  	DROP TABLE t2;
-SELECT * FROM continent_map
+       SELECT * FROM continent_map
 
+/*                                   Another method            */
+-- Defining  CTE to identify duplicates
+WITH cte AS (
+    SELECT
+        ctid,  -- Here ROW_NUMBER() is unique row identifier 
+        ROW_NUMBER() OVER (PARTITION BY country_code ORDER BY country_code,continent_code) AS rn
+    FROM
+        continent_map
+)
+
+-- Delete rows that are duplicates
+DELETE FROM continent_map
+WHERE country_code IN (
+    SELECT country_code
+    FROM cte
+    WHERE rn > 1
+);
 
 
